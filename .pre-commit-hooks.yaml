@@ -1,0 +1,7 @@
+-   id: kustomize
+    name: kustomize (via docker)
+    description: kustomize provided by docker
+    language: docker
+    entry: kustomize_build_subdirs
+    always_run: true
+    pass_filenames: false

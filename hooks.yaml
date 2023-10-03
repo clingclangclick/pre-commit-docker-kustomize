@@ -1,0 +1,7 @@
+-   id: kustomize
+    name: kustomize (via docker)
+    description: kustomize provided by docker
+    language: docker
+    args: [overlay]
+    always_run: true
+    pass_filenames: false
