@@ -1,0 +1,7 @@
+name: Kustomize Validation
+author: CCC
+description: A Kustomize(ish) validator
+
+runs:
+  using: docker
+  image: Dockerfile
