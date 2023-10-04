@@ -5,3 +5,5 @@ description: A Kustomize(ish) validator
 runs:
   using: docker
   image: Dockerfile
+  args:
+    - overlays
