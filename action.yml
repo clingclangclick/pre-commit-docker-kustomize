@@ -2,8 +2,22 @@ name: Kustomize Validation
 author: CCC
 description: A Kustomize(ish) validator
 
+inputs:
+  base-directory:
+    description: 'Base directory of operations'
+    required: false
+    default: .
+  depth:
+    description: 'Depth'
+    required: false
+    default: 4
+  debug:
+    description: 'Debug logging'
+    required: false
+    default: 0
+
 runs:
-  using: docker
-  image: Dockerfile
-  args:
-    - overlays
+  using: "composite"
+  steps:
+    - run: $GITHUB_ACTION_PATH/kustomize_build_subdirs
+      shell: bash
