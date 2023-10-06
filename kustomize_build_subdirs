@@ -1,0 +1,55 @@
+#!/usr/bin/env sh
+
+if [ -n "$1" ]
+then
+    BASE_DIRECTORY="$1"
+elif [ -n "$INPUT_BASE_DIRECTORY" ]
+then
+    BASE_DIRECTORY="$INPUT_BASE_DIRECTORY"
+fi
+if [ -z "$BASE_DIRECTORY" ]; then
+    BASE_DIRECTORY="overlays"
+fi
+
+if [ -n "$2" ]
+then
+    DEPTH="$2"
+elif [ -n "$INPUT_DEPTH" ]
+then
+    DEPTH="$INPUT_DEPTH"
+fi
+if [ -z "$DEPTH" ]; then
+    DEPTH="4"
+fi
+
+if [ -z "$DEBUG" ]
+then
+    DEBUG=0
+fi
+if [ -n "$RUNNER_DEBUG" ]
+then
+    DEBUG="$RUNNER_DEBUG"
+fi
+
+if [ "$DEBUG" -ne 0 ];
+then
+    echo "DEBUG LOGGING ENABLED"
+    echo "BASE_DIRECTORY: $BASE_DIRECTORY"
+    echo "DEPTH: $DEPTH"
+    set -x
+fi
+
+find "${BASE_DIRECTORY}" -maxdepth "$DEPTH" -mindepth "$DEPTH" -type d | \
+while read -r d
+do
+    (
+        cd "$d" || { echo "Cannot enter into $d"; exit 2; }
+        if [ -f Kustomization ] || [ -f kustomization.yaml ] || [ -f kustomization.yml ]
+        then
+            echo "Validating path: ${d#"$BASE_DIRECTORY"/*}"
+            kustomize build >/dev/null
+        else
+            echo "No kustomizations found in $d"
+        fi
+    )
+done
