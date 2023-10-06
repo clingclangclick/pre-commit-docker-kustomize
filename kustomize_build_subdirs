@@ -42,6 +42,14 @@ fi
 find "${BASE_DIRECTORY}" -maxdepth "$DEPTH" -mindepth "$DEPTH" -type d | \
 while read -r d
 do
-    echo "Validating path: ${d#"$BASE_DIRECTORY"/*}"
-    (cd "$d" && kustomize build >/dev/null)
+    (
+        cd "$d" || { echo "Cannot enter into $d"; exit 2; }
+        if [ -f Kustomization ] || [ -f kustomization.yaml ] || [ -f kustomization.yml ]
+        then
+            echo "Validating path: ${d#"$BASE_DIRECTORY"/*}"
+            kustomize build >/dev/null
+        else
+            echo "No kustomizations found in $d"
+        fi
+    )
 done
