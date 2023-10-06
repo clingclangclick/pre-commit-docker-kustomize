@@ -1,0 +1,92 @@
+name: "Release"
+
+on:
+  pull_request:
+    types:
+    - closed
+
+jobs:
+  Tag:
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'write'
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ github.event.pull_request.head.repo.full_name }}
+        fetch-depth: 0
+        ref: main
+    - name: Tag
+      id: tag
+      env:
+        BODY: ${{ github.event.pull_request.body }}
+        TITLE: ${{ github.event.pull_request.title }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        git config user.name "${{ github.actor }}"
+        git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+        # Increment Tag Version
+        # $1 - version (semver)
+        # $2 - position
+        increment_version() {
+          local suffix="${1#"${1%%[+-]*}"}"
+          local version="${1%"$suffix"}"
+          local delimiter=.
+          # shellcheck disable=SC2207
+          local array=($(tr "$delimiter" '\n' <<< "$version"))
+          array[$2]=$((array[$2]+1))
+          if [ "$2" -lt 2 ]; then array[2]=0; fi
+          if [ "$2" -lt 1 ]; then array[1]=0; fi
+          echo "$(local IFS="$delimiter"; echo "${array[*]}")$suffix"
+        }
+        if [ "${{ contains(github.event.pull_request.labels.*.name, 'version-patch' )}}" == "true" ]; then
+          POSITION=2
+        elif [ "${{ contains(github.event.pull_request.labels.*.name, 'version-major' )}}" == "true" ]; then
+          POSITION=0
+        elif [ "${{ contains(github.event.pull_request.labels.*.name, 'version-minor' )}}" == "true" ]; then
+          POSITION=1
+        else
+          POSITION=1
+        fi
+
+        git fetch --tags --force origin 'refs/tags/*:refs/tags/*'
+
+        # Version sort is _not_ semver
+        CURRENT_TAG="$(git tag -l "v*" 2>/dev/null | sort -Vr | head -n1)"
+        CURRENT_VERSION="${CURRENT_TAG##v}"
+        THIS_VERSION="$(increment_version "${CURRENT_VERSION:-0.0.0}" "$POSITION")"
+        TAG_VERSION="v$THIS_VERSION"
+
+        (
+          echo previous_tag="${CURRENT_TAG:-v0.0.0}"
+          echo previous_version="${CURRENT_VERSION:-0.0.0}"
+          echo tag="$TAG_VERSION"
+          echo version="$THIS_VERSION"
+        ) >> "$GITHUB_OUTPUT"
+
+        git tag -a -m "$TITLE" -m "$BODY" "$TAG_VERSION" ${{ github.sha }}
+        git push --follow-tags --force origin "$TAG_VERSION"
+    - name: Release
+      id: release
+      env:
+        GH_TOKEN: ${{ github.token }}
+        PREVIOUS_TAG: ${{ steps.tag.outputs.previous_tag }}
+        TAG: ${{ steps.tag.outputs.tag }}
+        VERSION: ${{ steps.tag.outputs.version }}
+      shell: bash
+      run: |
+        set -eu
+        gh_opts=(--generate-notes --target ${{ github.sha }} --verify-tag)
+        if [ "$PREVIOUS_TAG" != "v0.0.0" ]; then
+          gh_opts+=(--notes-start-tag "$PREVIOUS_TAG")
+        fi
+        # shellcheck disable=SC2068
+        gh release create "$TAG" ${gh_opts[@]}
