@@ -25,3 +25,13 @@ repos:
         args: [overlays, 4] # base directory, subdirectory level
         verbose: false
 ```
+
+## Example GH Action
+
+```yaml
+uses: clingclangclick/pre-commit-docker-kustomize@v0
+with:
+    base-directory: '.'
+    depth: '4'
+    debug: '1'
+```

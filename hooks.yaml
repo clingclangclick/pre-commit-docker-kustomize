@@ -1,7 +1,8 @@
 -   id: kustomize
     name: kustomize (via docker)
     description: kustomize provided by docker
-    language: docker
+    language: docker_image
+    entry: ghcr.io/clingclangclick/pre-commit-docker-kustomize/pre-commit-docker-kustomize:0.2.0
     args: [overlay]
     always_run: true
     pass_filenames: false

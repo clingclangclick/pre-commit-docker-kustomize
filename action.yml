@@ -6,18 +6,20 @@ inputs:
   base-directory:
     description: 'Base directory of operations'
     required: false
-    default: .
+    default: "."
   depth:
     description: 'Depth'
     required: false
-    default: 4
+    default: "4"
   debug:
     description: 'Debug logging'
     required: false
-    default: 0
+    default: "0"
 
 runs:
-  using: "composite"
-  steps:
-    - run: $GITHUB_ACTION_PATH/kustomize_build_subdirs
-      shell: bash
+  using: 'docker'
+  image: 'docker://ghcr.io/clingclangclick/pre-commit-docker-kustomize/pre-commit-docker-kustomize:0.2.0'
+  args:
+    - ${{ inputs.base-directory }}
+    - ${{ inputs.depth }}
+    - ${{ inputs.debug }}
