@@ -31,7 +31,7 @@ jobs:
           image:
             - Dockerfile
             - kustomize_build_subdirs
-            - release.yml
+            - .github/workflows/release.yml
   Tag:
     if: needs.Changes.outputs.tag_changed == 'true'
     runs-on: ubuntu-latest
