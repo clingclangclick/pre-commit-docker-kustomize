@@ -28,8 +28,12 @@ repos:
 
 ## Example GH Action
 
+With a repository file layout of `/example/overlays`:
+
 ```yaml
 uses: clingclangclick/pre-commit-docker-kustomize@v0
+volumes:
+  - ${{ github.workspace }}/example:/overlays
 with:
     base-directory: '.'
     depth: '4'
