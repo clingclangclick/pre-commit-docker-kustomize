@@ -1,6 +1,8 @@
 
 # syntax=docker/dockerfile:1.6
 FROM alpine:latest
+LABEL org.opencontainers.image.source https://github.com/clingclangclick/pre-commit-docker-kustomize
+
 RUN <<-EOF
     adduser kustomize -D
     apk --no-cache add curl git openssh
@@ -21,10 +23,13 @@ EOF
 
 COPY kustomize_build_subdirs /usr/local/bin/kustomize_build_subdirs
 
-ENV BASEDIR=/src
+ENV BASEDIR=/overlays
+VOLUME [ "/overlays" ]
 
 USER kustomize
 
-WORKDIR /src
+WORKDIR /overlays
 
 ENTRYPOINT [ "/usr/local/bin/kustomize_build_subdirs" ]
+
+CMD ["overlays","4"]

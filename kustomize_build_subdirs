@@ -8,7 +8,7 @@ then
     BASE_DIRECTORY="$INPUT_BASE_DIRECTORY"
 fi
 if [ -z "$BASE_DIRECTORY" ]; then
-    BASE_DIRECTORY="overlays"
+    BASE_DIRECTORY="${BASEDIR:-.}"
 fi
 
 if [ -n "$2" ]
@@ -42,19 +42,35 @@ then
     set -x
 fi
 
-find "${BASE_DIRECTORY}" -maxdepth "$DEPTH" -mindepth "$DEPTH" -type d | \
-while read -r d
-do
-    (
-        cd "$d" || { echo "Cannot enter into $d"; exit 2; }
-        if [ -f Kustomization ] || [ -f kustomization.yaml ] || [ -f kustomization.yml ]
-        then
-            echo "Validating path: ${d#"$BASE_DIRECTORY"/*}"
-            kustomize build >/dev/null
-        else
-            echo "No kustomizations found in $d"
-        fi
+if [ -d "${BASE_DIRECTORY}" ]
+then
+    echo 0 > /tmp/rc.tmp
+    find "${BASE_DIRECTORY}" -maxdepth "$DEPTH" -mindepth "$DEPTH" -type d | (
+        while IFS= read -r d
+        do
+            (
+                cd "$d" || { echo "Cannot enter into $d"; exit 2; }
+                if [ -f Kustomization ] || [ -f kustomization.yaml ] || [ -f kustomization.yml ]
+                then
+                    printf "Validating path: %s..." "${d#"$BASE_DIRECTORY"/*}"
+                    if kustomize build >/dev/null
+                    then
+                        printf "Validated\n"
+                    else
+                        echo 1 > /tmp/rc.tmp
+                        printf "Failed to build kustomization in %s\n" "$d"
+                    fi
+                else
+                    printf "No kustomizations found in %s\n" "$d"
+                fi
+            )
+        done
     )
-done
-
-echo "Complete"
+    RC=$(cat /tmp/rc.tmp)
+    rm /tmp/rc.tmp
+    printf "Complete\n"
+    exit "$RC"
+else
+    printf "Directory %s does not exist\n" "$BASE_DIRECTORY"
+    exit 1
+fi
