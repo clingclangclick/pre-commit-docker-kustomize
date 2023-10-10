@@ -23,13 +23,12 @@ EOF
 
 COPY kustomize_build_subdirs /usr/local/bin/kustomize_build_subdirs
 
-ENV BASEDIR=/overlays
-VOLUME [ "/overlays" ]
-
 USER kustomize
 
+VOLUME [ "/overlays" ]
 WORKDIR /overlays
 
-ENTRYPOINT [ "/usr/local/bin/kustomize_build_subdirs" ]
+ENV BASEDIR=/overlays
 
+ENTRYPOINT [ "/usr/local/bin/kustomize_build_subdirs" ]
 CMD ["overlays","4"]
