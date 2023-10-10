@@ -90,3 +90,65 @@ jobs:
         fi
         # shellcheck disable=SC2068
         gh release create "$TAG" ${gh_opts[@]}
+
+  Image:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+      packages: 'write'
+    needs:
+      - Tag
+    env:
+      DOCKER_REPOSITORIES: |
+        ghcr.io/${{ github.repository }}/pre-commit-docker-kustomize
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Login to Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ github.token }}
+    - name: Image Metadata
+      id: metadata
+      uses: docker/metadata-action@v5
+      env:
+        IMAGE_TITLE: "FluxCD Kind of Templater"
+        VERSION: ${{ needs.Tag.outputs.version }}
+      with:
+        images: |
+          ${{ env.DOCKER_REPOSITORIES }}
+        tags: |
+          type=raw,enable=true,priority=200,prefix=,suffix=,value=${{ env.VERSION }}
+          type=ref,event=pr,prefix=snapshot-pr-,enable=${{ contains(github.event.pull_request.labels.*.name, 'snapshot') }}
+          type=pep440,pattern={{version}},enable=${{ startsWith(github.ref, 'refs/tags') }}
+        labels:
+          org.opencontainers.image.title=${{ env.IMAGE_TITLE }}
+          org.opencontainers.image.authors=${{ github.triggering_actor }}
+    - name: Setup Docker BuildX
+      uses: docker/setup-buildx-action@v3
+    - name: Build and Push
+      id: docker-build-and-push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        push: true
+        tags: ${{ steps.metadata.outputs.tags }}
+        labels: ${{ steps.metadata.outputs.labels }}
+        platforms: linux/amd64,linux/arm64
+    - name: Summary
+      env:
+        IMAGE_ID: ${{ steps.docker-build-and-push.outputs.imageid }}
+      shell: bash
+      run: |
+        set -e
+        (
+          echo '### Image Created'
+          echo "Image Id: [${{ env.IMAGE_ID }}](${{ env.IMAGE_ID }})"
+          echo "Image Tags: $(docker image inspect --format "{{.RepoTags}}" ${{ env.IMAGE_ID }})"
+        ) >> "$GITHUB_STEP_SUMMARY"
