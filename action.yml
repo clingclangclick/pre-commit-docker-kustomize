@@ -18,7 +18,7 @@ inputs:
 
 runs:
   using: 'docker'
-  image: 'docker://ghcr.io/clingclangclick/pre-commit-docker-kustomize/pre-commit-docker-kustomize:0.2.0'
+  image: 'docker://ghcr.io/clingclangclick/pre-commit-docker-kustomize/pre-commit-docker-kustomize:0.6.0'
   args:
     - ${{ inputs.base-directory }}
     - ${{ inputs.depth }}
