@@ -26,3 +26,5 @@ ENV BASEDIR=/src
 USER kustomize
 
 WORKDIR /src
+
+ENTRYPOINT [ "/usr/local/bin/kustomize_build_subdirs" ]
