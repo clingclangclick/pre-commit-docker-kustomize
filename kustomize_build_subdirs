@@ -22,13 +22,16 @@ if [ -z "$DEPTH" ]; then
     DEPTH="4"
 fi
 
-if [ -z "$DEBUG" ]
+DEBUG=0
+if [ -n "$3" ]
 then
-    DEBUG=0
-fi
-if [ -n "$RUNNER_DEBUG" ]
+    DEBUG="$3"
+elif [ -n "$RUNNER_DEBUG" ]
 then
     DEBUG="$RUNNER_DEBUG"
+elif [ -z "$DEBUG" ]
+then
+    DEBUG=0
 fi
 
 if [ "$DEBUG" -ne 0 ];

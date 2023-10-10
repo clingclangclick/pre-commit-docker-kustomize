@@ -6,9 +6,36 @@ on:
     - closed
 
 jobs:
-  Tag:
+  Changes:
     if: github.event_name == 'pull_request' && github.event.pull_request.merged
     runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+    outputs:
+      tag_changed: ${{ steps.changed-files.outputs.doc_any_modified || steps.changed-files.outputs.image_any_modified }}
+      image_changed: ${{ steps.changed-files.outputs.image_any_modified }}
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      with:
+        persist-credentials: true
+    - name: Changed Files
+      id: changed-files
+      uses: tj-actions/changed-files@v39
+      with:
+        files_yaml: |
+          doc:
+            - '**/*.md'
+            - README.md
+            - LICENSE
+          image:
+            - Dockerfile
+            - kustomize_build_subdirs
+  Tag:
+    if: needs.Changes.outputs.tag_changed == 'true'
+    runs-on: ubuntu-latest
+    needs:
+      - Changes
     permissions:
       contents: 'write'
     outputs:
@@ -92,14 +119,17 @@ jobs:
         gh release create "$TAG" ${gh_opts[@]}
 
   Image:
+    if: needs.Changes.outputs.image_changed == 'true'
     name: Build and Push Docker Image
+    needs:
+      - Changes
+      - Tag
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
       id-token: 'write'
+      issues: 'write'
       packages: 'write'
-    needs:
-      - Tag
     env:
       DOCKER_REPOSITORIES: |
         ghcr.io/${{ github.repository }}/pre-commit-docker-kustomize
@@ -116,7 +146,7 @@ jobs:
       id: metadata
       uses: docker/metadata-action@v5
       env:
-        IMAGE_TITLE: "FluxCD Kind of Templater"
+        IMAGE_TITLE: "pre-commit-docker-kustomize"
         VERSION: ${{ needs.Tag.outputs.version }}
       with:
         images: |
@@ -143,12 +173,15 @@ jobs:
         platforms: linux/amd64,linux/arm64
     - name: Summary
       env:
-        IMAGE_ID: ${{ steps.docker-build-and-push.outputs.imageid }}
+        GH_TOKEN: ${{ github.token }}
+        IMAGE_NAME: ${{ fromJson(steps.docker-build-and-push.outputs.metadata).image.name }}
+        PR_NUMBER: ${{ github.event.number }}
       shell: bash
       run: |
         set -e
         (
           echo '### Image Created'
-          echo "Image Id: [${{ env.IMAGE_ID }}](${{ env.IMAGE_ID }})"
+          echo "Image Id: [${{ env.IMAGE_NAME }}](${{ env.IMAGE_NAME }})"
           echo "Image Tags: $(docker image inspect --format "{{.RepoTags}}" ${{ env.IMAGE_ID }})"
         ) >> "$GITHUB_STEP_SUMMARY"
+        gh pr comment "$PR_NUMBER" --body "$(cat "$GITHUB_STEP_SUMMARY")"
