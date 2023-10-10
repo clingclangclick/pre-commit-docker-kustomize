@@ -31,6 +31,7 @@ jobs:
           image:
             - Dockerfile
             - kustomize_build_subdirs
+            - release.yml
   Tag:
     if: needs.Changes.outputs.tag_changed == 'true'
     runs-on: ubuntu-latest
@@ -182,6 +183,5 @@ jobs:
         (
           echo '### Image Created'
           echo "Image Id: [${{ env.IMAGE_NAME }}](${{ env.IMAGE_NAME }})"
-          echo "Image Tags: $(docker image inspect --format "{{.RepoTags}}" ${{ env.IMAGE_ID }})"
         ) >> "$GITHUB_STEP_SUMMARY"
         gh pr comment "$PR_NUMBER" --body "$(cat "$GITHUB_STEP_SUMMARY")"
